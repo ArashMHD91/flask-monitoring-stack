@@ -1,0 +1,33 @@
+groups:
+     - name: service_alerts
+       interval: 10s
+       rules:
+         # Alert if app is down - using Prometheus 'up' metric
+         - alert: ServiceDown
+           expr: up{job="flask-app"} == 0
+           for: 30s
+           labels:
+             severity: critical
+           annotations:
+             summary: "Service is down"
+             description: "The Flask app has been down for more than 30 seconds"
+
+         # Alert if CPU is too high
+         - alert: HighCPUUsage
+           expr: cpu_usage_percent > 80
+           for: 1m
+           labels:
+             severity: warning
+           annotations:
+             summary: "High CPU usage detected"
+             description: "CPU usage is above 80% for more than 1 minute"
+
+         # Alert if memory is too high
+         - alert: HighMemoryUsage
+           expr: memory_usage_percent > 85
+           for: 1m
+           labels:
+             severity: warning
+           annotations:
+             summary: "High memory usage detected"
+             description: "Memory usage is above 85%"

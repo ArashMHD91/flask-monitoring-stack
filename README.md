@@ -1,112 +1,46 @@
-# Flask Monitoring Stack - Complete Step-by-Step Guide
+# Flask Monitoring Stack - Complete Beginner's Guide
 
 A hands-on tutorial for building a production-grade monitoring system from scratch. Perfect for learning SRE (Site Reliability Engineering), Docker, Prometheus, and Grafana.
 
-![Project Status](https://img.shields.io/badge/status-active-success.svg)
 ![Docker](https://img.shields.io/badge/docker-%230db7ed.svg?style=flat&logo=docker&logoColor=white)
 ![Prometheus](https://img.shields.io/badge/Prometheus-E6522C?style=flat&logo=Prometheus&logoColor=white)
 ![Grafana](https://img.shields.io/badge/grafana-%23F46800.svg?style=flat&logo=grafana&logoColor=white)
-![Difficulty](https://img.shields.io/badge/difficulty-beginner-green.svg)
 ![Time](https://img.shields.io/badge/time-2--3%20hours-blue.svg)
 
 ---
 
 ## 📋 What You'll Build
 
-By the end of this tutorial, you'll have:
+By the end of this guide, you'll have:
 
-- ✅ A Flask web application that exposes metrics
-- ✅ A complete monitoring stack running in Docker containers
-- ✅ Real-time dashboards in Grafana showing CPU, memory, and service status
+- ✅ A Flask web application exposing metrics
+- ✅ A complete monitoring stack running in Docker
+- ✅ Real-time dashboards showing CPU, memory, and service status
 - ✅ Automated alerts that fire when things go wrong
-- ✅ A tested, validated monitoring system ready for your portfolio
+- ✅ A portfolio-ready project with validation through failure testing
 
-**No prior experience required!** This guide assumes you're a complete beginner.
-
----
-
-## 🎯 What You'll Learn
-
-- **Docker**: How to containerize applications and orchestrate multiple services
-- **Prometheus**: How to collect, store, and query metrics
-- **Grafana**: How to build beautiful dashboards for data visualization
-- **Alerting**: How to set up automated alerts for service failures
-- **SRE Principles**: Core concepts of Site Reliability Engineering
-- **Troubleshooting**: How to debug common monitoring issues
+**Perfect for beginners!** No prior experience required.
 
 ---
 
-## ⏱️ Time Required
-
-- **Setup & Installation**: 15-20 minutes
-- **Building the Stack**: 45-60 minutes
-- **Configuration & Testing**: 30-45 minutes
-- **Total**: 2-3 hours (including breaks)
-
----
-
-## 📦 Prerequisites
+## 📦 What You Need
 
 ### Required Software
 
-Before starting, install these tools:
+1. **Docker Desktop**
 
-1. **Docker Desktop** (includes Docker & Docker Compose)
 2. **Text Editor**
-3. **Terminal/Command Line Access**
-   
+
 ### Verify Installation
 
-Open your terminal and run:
+Open terminal/command prompt and run:
 
 ```bash
 docker --version
 docker-compose --version
 ```
 
-**Expected output:**
-```
-Docker version 20.10.x or higher
-docker-compose version 1.29.x or higher
-```
-
-If you see version numbers, you're ready to start! 🎉
-
----
-
-## 🏗️ Project Architecture
-
-Here's what we're building:
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│                     Docker Network                          │
-│                                                             │
-│  ┌──────────────┐      ┌──────────────┐                     │
-│  │  Flask App   │◄─────┤  Prometheus  │                     │
-│  │  Port: 8080  │      │  Port: 9090  │                     │
-│  │              │      │              │                     │
-│  │ /metrics     │      │ - Collects   │                     │
-│  │ /health      │      │ - Stores     │                     │
-│  └──────────────┘      │ - Alerts     │                     │
-│                        └──────┬───────┘                     │
-│                               │                             │
-│  ┌──────────────┐            │        ┌──────────────┐      │
-│  │Node Exporter │◄───────────┘        │   Grafana    │      │
-│  │ Port: 9100   │◄────────────────────┤  Port: 3000  │      │
-│  │              │                     │              │      │
-│  │ System       │                     │ Dashboards   │      │
-│  │ Metrics      │                     │ Graphs       │      │
-│  └──────────────┘                     └──────────────┘      │
-│                                                             │
-└─────────────────────────────────────────────────────────────┘
-```
-
-**Components:**
-- **Flask App**: Your application (the thing being monitored)
-- **Prometheus**: Collects and stores metrics
-- **Grafana**: Visualizes metrics in dashboards
-- **Node Exporter**: Provides system metrics (CPU, memory, disk)
+You should see version numbers. If yes, you're ready! 🎉
 
 ---
 
@@ -114,48 +48,38 @@ Here's what we're building:
 
 ---
 
-## PART 1: PROJECT SETUP
+## STEP 1: Create Project Folders
 
-### Step 1: Create Project Folder Structure
-
-Open your terminal and create the project folders:
+Open your terminal and run:
 
 ```bash
-# Create main project folder
+# Create main folder
 mkdir flask-monitoring-stack
 cd flask-monitoring-stack
 
 # Create subfolders
 mkdir app
 mkdir prometheus
-mkdir grafana
 ```
 
-**What we just did:** Created an organized folder structure to keep our files neat.
-
-**Folder structure so far:**
+**Your structure:**
 ```
 flask-monitoring-stack/
 ├── app/
-├── prometheus/
-└── grafana/
+└── prometheus/
 ```
 
 ---
 
-## PART 2: BUILD THE FLASK APPLICATION
+## STEP 2: Create Flask Application
 
-### Step 2: Create the Flask Application
-
-Navigate to the `app` folder and create the Python application:
+Navigate to app folder:
 
 ```bash
 cd app
 ```
 
-Now create a file called `app.py`. You can use any text editor:
-
-**Copy this code into `app.py`:**
+Create `app.py` file (use any text editor):
 
 ```python
 from flask import Flask, jsonify
@@ -164,12 +88,12 @@ import time
 
 app = Flask(__name__)
 
-# Homepage - simple welcome message
+# Homepage
 @app.route('/')
 def home():
     return "Hello! I'm a monitored Flask application! 👋"
 
-# Health check endpoint - tells if the app is running
+# Health check endpoint
 @app.route('/health')
 def health():
     return jsonify({
@@ -177,21 +101,17 @@ def health():
         "timestamp": time.time()
     }), 200
 
-# Metrics endpoint - provides data for Prometheus
+# Metrics endpoint for Prometheus
 @app.route('/metrics')
 def metrics():
-    # Get current CPU usage
     cpu_percent = psutil.cpu_percent(interval=1)
-    
-    # Get current memory usage
     memory = psutil.virtual_memory()
     
-    # Format metrics in Prometheus format
-    metrics_output = f"""# HELP cpu_usage_percent Current CPU usage percentage
+    metrics_output = f"""# HELP cpu_usage_percent Current CPU usage
 # TYPE cpu_usage_percent gauge
 cpu_usage_percent {cpu_percent}
 
-# HELP memory_usage_percent Current memory usage percentage
+# HELP memory_usage_percent Current memory usage
 # TYPE memory_usage_percent gauge
 memory_usage_percent {memory.percent}
 
@@ -201,139 +121,88 @@ app_up 1
 """
     return metrics_output, 200, {'Content-Type': 'text/plain'}
 
-# Run the application
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=8080)
 ```
 
-**Save the file**
-
-**What this code does:**
-- **`/` endpoint**: A simple homepage that says hello
-- **`/health` endpoint**: Returns JSON showing the app is healthy
-- **`/metrics` endpoint**: Provides CPU and memory data in a format Prometheus understands
+**Save this file as `app.py`**
 
 ---
 
-### Step 3: Create the Dockerfile
+## STEP 3: Create Dockerfile
 
-In the same `app` folder, create a file called `Dockerfile` (no file extension):
-
-```bash
-# If you're still in the app folder:
-vim Dockerfile
-```
-
-**Copy this into the Dockerfile:**
+In the same `app` folder, create `Dockerfile` (no extension):
 
 ```dockerfile
-# Start with a Python base image
+# Use Python base image
 FROM python:3.9-slim
 
-# Set the working directory inside the container
+# Set working directory
 WORKDIR /app
 
-# Install required Python packages
+# Install dependencies
 RUN pip install flask psutil
 
-# Copy our application into the container
+# Copy application
 COPY app.py .
 
-# Tell Docker this container uses port 8080
+# Expose port
 EXPOSE 8080
 
-# Command to run when container starts
+# Run application
 CMD ["python", "app.py"]
 ```
 
-**Save the file.**
-
-**What is a Dockerfile?**
-Think of it as a recipe that tells Docker how to build a container for your app. Each line is a step in the recipe.
-
-**What each line does:**
-- `FROM python:3.9-slim` - Start with a minimal Python environment
-- `WORKDIR /app` - Create a folder called /app inside the container
-- `RUN pip install` - Install the Flask and psutil libraries
-- `COPY app.py .` - Copy our Python file into the container
-- `EXPOSE 8080` - Tell Docker our app listens on port 8080
-- `CMD` - Run the app when the container starts
+**Save as `Dockerfile`** (exactly this name, no .txt extension)
 
 ---
 
-## PART 3: CONFIGURE PROMETHEUS
+## STEP 4: Create Prometheus Configuration
 
-### Step 4: Create Prometheus Configuration
-
-Go back to the main project folder and enter the prometheus folder:
+Go back and enter prometheus folder:
 
 ```bash
 cd ..
 cd prometheus
 ```
 
-Create a file called `prometheus.yml`:
-
-```bash
-vim prometheus.yml
-```
-
-**Copy this configuration:**
+Create `prometheus.yml`:
 
 ```yaml
-# Global settings for Prometheus
 global:
-  scrape_interval: 15s       # How often to collect metrics
-  evaluation_interval: 15s   # How often to evaluate alert rules
+  scrape_interval: 15s
+  evaluation_interval: 15s
 
-# Load alert rules from this file
 rule_files:
   - '/etc/prometheus/alert_rules.yml'
 
-# Configure what to monitor
 scrape_configs:
-  # Monitor Prometheus itself
   - job_name: 'prometheus'
     static_configs:
       - targets: ['localhost:9090']
 
-  # Monitor our Flask application
   - job_name: 'flask-app'
     static_configs:
       - targets: ['app:8080']
 
-  # Monitor system metrics
   - job_name: 'node-exporter'
     static_configs:
       - targets: ['node-exporter:9100']
 ```
 
-**Save the file.**
-
-**What this configuration does:**
-- `scrape_interval: 15s` - Prometheus will check for new metrics every 15 seconds
-- Each `job_name` defines something to monitor
-- `targets` are the addresses where metrics are available
-- Notice we use container names (like `app:8080`) instead of `localhost` - Docker networking!
+**Save as `prometheus.yml`**
 
 ---
 
-### Step 5: Create Alert Rules
+## STEP 5: Create Alert Rules
 
-Still in the `prometheus` folder, create `alert_rules.yml`:
-
-```bash
-vim alert_rules.yml
-```
-
-**Copy these alert rules:**
+Still in `prometheus` folder, create `alert_rules.yml`:
 
 ```yaml
 groups:
   - name: service_alerts
     interval: 10s
     rules:
-      # Alert when the Flask app goes down
       - alert: ServiceDown
         expr: up{job="flask-app"} == 0
         for: 30s
@@ -343,7 +212,6 @@ groups:
           summary: "Flask application is down"
           description: "The Flask app has been unreachable for more than 30 seconds"
 
-      # Alert when CPU usage is too high
       - alert: HighCPUUsage
         expr: cpu_usage_percent > 80
         for: 1m
@@ -353,7 +221,6 @@ groups:
           summary: "High CPU usage detected"
           description: "CPU usage is above 80% for more than 1 minute"
 
-      # Alert when memory usage is too high
       - alert: HighMemoryUsage
         expr: memory_usage_percent > 85
         for: 1m
@@ -361,30 +228,16 @@ groups:
           severity: warning
         annotations:
           summary: "High memory usage detected"
-          description: "Memory usage is above 85% for more than 1 minute"
+          description: "Memory usage is above 85%"
 ```
 
-**Save the file.**
-
-**Understanding alerts:**
-- `expr: up{job="flask-app"} == 0` - The condition to check (is the app down?)
-- `for: 30s` - Wait 30 seconds before firing (avoids false alarms)
-- `severity: critical` - How serious is this problem?
-- `annotations` - Human-readable descriptions of the alert
-
-**Important note about the metric:**
-We use `up{job="flask-app"}` instead of `app_up` because:
-- `up` is automatically created by Prometheus for every target
-- It exists even when the container is stopped
-- `app_up` would disappear when the app stops (no one to report it!)
+**Save as `alert_rules.yml`**
 
 ---
 
-## PART 4: DOCKER COMPOSE ORCHESTRATION
+## STEP 6: Create Docker Compose File
 
-### Step 6: Create Docker Compose File
-
-Go back to the main project folder:
+Go back to main folder:
 
 ```bash
 cd ..
@@ -392,34 +245,25 @@ cd ..
 
 Create `docker-compose.yml`:
 
-```bash
-vim docker-compose.yml
-```
-
-**Copy this configuration:**
-
 ```yaml
 version: '3.8'
 
 services:
-  # Our Flask application
   app:
-    build: ./app                    # Build from the Dockerfile in ./app
+    build: ./app
     container_name: flask-app
     ports:
-      - "8080:8080"                 # Map port 8080 to your computer
+      - "8080:8080"
     networks:
       - monitoring
     restart: unless-stopped
 
-  # Prometheus - metrics collector
   prometheus:
-    image: prom/prometheus:latest   # Use official Prometheus image
+    image: prom/prometheus:latest
     container_name: prometheus
     ports:
       - "9090:9090"
     volumes:
-      # Share config files with the container
       - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
       - ./prometheus/alert_rules.yml:/etc/prometheus/alert_rules.yml
     command:
@@ -429,22 +273,20 @@ services:
       - monitoring
     restart: unless-stopped
 
-  # Grafana - visualization dashboard
   grafana:
     image: grafana/grafana:latest
     container_name: grafana
     ports:
       - "3000:3000"
     environment:
-      - GF_SECURITY_ADMIN_USER=admin       # Default username
-      - GF_SECURITY_ADMIN_PASSWORD=admin   # Default password
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
     volumes:
-      - grafana-storage:/var/lib/grafana   # Persist dashboard data
+      - grafana-storage:/var/lib/grafana
     networks:
       - monitoring
     restart: unless-stopped
 
-  # Node Exporter - system metrics
   node-exporter:
     image: prom/node-exporter:latest
     container_name: node-exporter
@@ -454,43 +296,27 @@ services:
       - monitoring
     restart: unless-stopped
 
-# Create a network so containers can talk to each other
 networks:
   monitoring:
     driver: bridge
 
-# Create a volume to store Grafana data
 volumes:
   grafana-storage:
 ```
 
-**Save the file.**
-
-**What is Docker Compose?**
-Instead of starting each container manually with separate commands, Docker Compose lets us define all containers in one file and start them all with a single command!
-
-**What each section does:**
-- `services:` - Defines all the containers we want to run
-- `build: ./app` - Build the Flask app from our Dockerfile
-- `image: prom/prometheus:latest` - Download and use the official Prometheus image
-- `ports: "8080:8080"` - Maps container port 8080 to your computer's port 8080
-- `volumes:` - Shares files between your computer and the container
-- `networks:` - Puts all containers on the same network so they can communicate
-- `restart: unless-stopped` - Automatically restart if the container crashes
+**Save as `docker-compose.yml`**
 
 ---
 
-## PART 5: START THE MONITORING STACK
+## STEP 7: Verify File Structure
 
-### Step 7: Launch All Services
-
-You should now be in the main project folder (`flask-monitoring-stack`). Let's verify your file structure:
+Check your files:
 
 ```bash
 ls -R
 ```
 
-**You should see:**
+**Should show:**
 ```
 flask-monitoring-stack/
 ├── app/
@@ -502,26 +328,26 @@ flask-monitoring-stack/
 └── docker-compose.yml
 ```
 
-**If everything looks good, start the stack:**
+✅ If this matches, continue!
+
+---
+
+## STEP 8: Start Everything
+
+From the main folder, run:
 
 ```bash
 docker-compose up -d
 ```
 
-**What happens next:**
-1. Docker downloads the required images (Prometheus, Grafana, Node Exporter)
-2. Docker builds your Flask application
-3. All four containers start
-4. The `-d` flag means "detached" (runs in the background)
+**This will:**
+- Download images (first time takes 2-5 minutes)
+- Build Flask app
+- Start all 4 containers
 
-**This might take 2-5 minutes the first time!**
-
-**You'll see output like:**
+**Wait for it to complete. You'll see:**
 ```
 Creating network "flask-monitoring-stack_monitoring" ... done
-Creating volume "flask-monitoring-stack_grafana-storage" ... done
-Building app...
-...
 Creating flask-app ... done
 Creating prometheus ... done
 Creating grafana ... done
@@ -530,546 +356,419 @@ Creating node-exporter ... done
 
 ---
 
-### Step 8: Verify Everything is Running
-
-Check that all containers are up:
+## STEP 9: Verify Containers Running
 
 ```bash
 docker-compose ps
 ```
 
-**Expected output:**
+**All 4 should show "Up":**
 ```
-NAME            IMAGE                      STATUS
-flask-app       flask-monitoring-app       Up
-prometheus      prom/prometheus:latest     Up
-grafana         grafana/grafana:latest     Up
-node-exporter   prom/node-exporter:latest  Up
+NAME            STATUS
+flask-app       Up
+prometheus      Up
+grafana         Up
+node-exporter   Up
 ```
 
-**All four containers should show "Up"!**
-
-**If a container is not up:**
-```bash
-# Check the logs for that container
-docker logs flask-app
-docker logs prometheus
-docker logs grafana
-docker logs node-exporter
-```
+✅ Perfect! Everything is running.
 
 ---
 
-## PART 6: VERIFY THE FLASK APPLICATION
+## STEP 10: Test Flask Application
 
-### Step 9: Test the Flask Endpoints
+Open browser, visit these URLs:
 
-Open your web browser and visit these URLs:
+**1. Homepage:** http://localhost:8080
+- Should show: "Hello! I'm a monitored Flask application! 👋"
 
-**1. Homepage:**
-```
-http://localhost:8080
-```
-**Expected:** Should show: "Hello! I'm a monitored Flask application! 👋"
+**2. Health:** http://localhost:8080/health
+- Should show JSON with "healthy" status
 
-**2. Health Check:**
-```
-http://localhost:8080/health
-```
-**Expected:** Should show JSON:
-```json
-{
-  "status": "healthy",
-  "timestamp": 1234567890.123
-}
-```
+**3. Metrics:** http://localhost:8080/metrics
+- Should show metrics like `cpu_usage_percent`, `memory_usage_percent`, `app_up 1`
 
-**3. Metrics Endpoint:**
-```
-http://localhost:8080/metrics
-```
-**Expected:** Should show:
-```
-# HELP cpu_usage_percent Current CPU usage percentage
-# TYPE cpu_usage_percent gauge
-cpu_usage_percent 5.2
-
-# HELP memory_usage_percent Current memory usage percentage
-# TYPE memory_usage_percent gauge
-memory_usage_percent 45.3
-
-# HELP app_up Application is running
-# TYPE app_up gauge
-app_up 1
-```
-
-✅ **If all three endpoints work, your Flask app is running correctly!**
+✅ If all three work, Flask is perfect!
 
 ---
 
-## PART 7: CONFIGURE PROMETHEUS
+## STEP 11: Verify Prometheus
 
-### Step 10: Access Prometheus
+Open: http://localhost:9090
 
-Open your browser and go to:
-```
-http://localhost:9090
-```
+**Check Targets:**
+1. Click "Status" → "Targets"
+2. Should see 3 targets, all **UP (green)**:
+   - prometheus
+   - flask-app
+   - node-exporter
 
-**You should see the Prometheus web interface!**
+**Test a Query:**
+1. Click "Graph" tab
+2. Type: `up{job="flask-app"}`
+3. Click "Execute"
+4. Should show value **1**
 
----
+**Check Alerts:**
+1. Click "Alerts" tab
+2. Should see 3 alerts (all green/inactive):
+   - ServiceDown
+   - HighCPUUsage
+   - HighMemoryUsage
 
-### Step 11: Verify Targets are Being Monitored
-
-1. **Click on "Status"** in the top menu
-2. **Select "Targets"** from the dropdown
-
-**You should see 3 targets:**
-
-| Endpoint | State | Labels |
-|----------|-------|--------|
-| prometheus (localhost:9090) | UP 🟢 | job="prometheus" |
-| flask-app (app:8080) | UP 🟢 | job="flask-app" |
-| node-exporter (node-exporter:9100) | UP 🟢 | job="node-exporter" |
-
-**All three should show "State: UP" in green!**
-
-**If any target is DOWN (red):**
-- Wait 15-30 seconds and refresh (Prometheus scrapes every 15 seconds)
-- Check that the container is running: `docker-compose ps`
-- Check container logs: `docker logs <container-name>`
+✅ Prometheus is working!
 
 ---
 
-### Step 12: Test a Prometheus Query
+## STEP 12: Configure Grafana - Add Data Source
 
-Let's verify Prometheus is collecting metrics:
+Open: http://localhost:3000
 
-1. **Click "Graph"** in the top menu (or go to home)
-2. In the query box at the top, type: `up{job="flask-app"}`
-3. **Click "Execute"**
-4. **Click the "Graph" tab** (next to "Table")
+**Login:**
+- Username: `admin`
+- Password: `admin`
+- (Skip password change if prompted)
 
-**You should see:**
-- A line graph
-- The value should be **1** (meaning the app is up)
-- If you hover over the line, you'll see the value
+**Add Prometheus:**
+1. Click ☰ menu (top left)
+2. Go to: **Connections → Data sources**
+3. Click **Add data source**
+4. Select **Prometheus**
+5. Set URL to: `http://prometheus:9090` ⚠️ **Exactly this!**
+6. Scroll down, click **Save & Test**
+7. Should see green ✅ "Successfully queried"
 
-**Try another query:**
-- Type: `cpu_usage_percent`
-- Click "Execute"
-- You should see the CPU usage of your Flask app!
-
-✅ **If queries work, Prometheus is collecting metrics correctly!**
-
----
-
-### Step 13: Check Alert Rules
-
-1. **Click "Alerts"** in the top menu
-2. You should see your 3 alert rules:
-   - **ServiceDown** (inactive/green)
-   - **HighCPUUsage** (inactive/green)
-   - **HighMemoryUsage** (inactive/green)
-
-**All should be green (inactive) because nothing is wrong yet!**
-
-We'll test these alerts later in the Failure Simulation section.
+✅ Data source connected!
 
 ---
 
-## PART 8: CONFIGURE GRAFANA
+## STEP 13: Import Node Exporter Dashboard
 
-### Step 14: Access Grafana
+1. Click ☰ → **Dashboards**
+2. Click **New** → **Import**
+3. Enter ID: `1860`
+4. Click **Load**
+5. Select **Prometheus** as data source
+6. Click **Import**
 
-Open your browser and go to:
-```
-http://localhost:3000
-```
+🎉 **You now have a beautiful system dashboard!**
 
-**Login screen will appear:**
-- **Username**: `admin`
-- **Password**: `admin`
-
-**After login, Grafana may ask you to change the password:**
-- You can change it or click "Skip" for now
-
-✅ **You're now in Grafana!**
+Explore it - see CPU, memory, disk, network graphs with live data.
 
 ---
 
-### Step 15: Add Prometheus as a Data Source
+## STEP 14: Create Custom Dashboard - Panel 1 (App Status)
 
-This tells Grafana where to get its data from.
+1. Click ☰ → **Dashboards**
+2. Click **New** → **New Dashboard**
+3. Click **Add visualization**
+4. Select **Prometheus**
 
-**1. Click the ☰ menu** (hamburger icon, top left - the three horizontal lines)
+**Configure Query:**
+1. Click **Code** button (top right of query area)
+2. Type: `up{job="flask-app"}`
+3. Click **Run queries**
 
-**2. Navigate to: Connections → Data sources**
-   - In the left sidebar, look for "Connections"
-   - Click on it
-   - Then click "Data sources"
+**Configure Panel:**
+1. Change **Visualization** (top right) from "Time series" to **Stat**
+2. In right sidebar, **Title**: type `App Status`
+3. Scroll to **Standard options → Thresholds**:
+   - Base: **Red** (for value 0)
+   - Click **+ Add threshold**
+   - Value: `1`, Color: **Green**
+4. Click **Apply** (top right)
 
-**3. Click "Add data source"** (blue button)
-
-**4. Select "Prometheus"** from the list
-   - It should be near the top
-   - Has an orange flame logo
-
-**5. Configure the connection:**
-   - **Name**: Leave as "Prometheus"
-   - **URL**: Enter exactly: `http://prometheus:9090`
-   
-   ⚠️ **Important:** Use `http://prometheus:9090` (not `localhost`)
-   - We use the container name, not localhost
-   - This is Docker networking magic!
-
-**6. Scroll to the bottom and click "Save & Test"**
-
-**Expected result:**
-- Green checkmark ✅
-- Message: "Successfully queried the Prometheus API"
-
-✅ **If you see green, the connection works!**
-
-**If you see an error:**
-- Double-check the URL is exactly: `http://prometheus:9090`
-- Make sure Prometheus is running: `docker-compose ps`
-- Try clicking "Save & Test" again
+✅ Should show green **1**!
 
 ---
 
-### Step 16: Import Node Exporter Dashboard
+## STEP 15: Create Panel 2 (CPU Usage)
 
-Let's import a pre-built dashboard that shows system metrics!
+1. Click **Add** → **Visualization**
+2. Select **Prometheus**
+3. Query (Code mode): `cpu_usage_percent`
+4. Click **Run queries**
+5. Title: `CPU Usage %`
+6. Keep visualization as **Time series**
+7. Click **Apply**
 
-**1. Click the ☰ menu → Dashboards**
-
-**2. Click "New" → "Import"** (buttons at the top right)
-
-**3. In the "Import via grafana.com" field:**
-   - Type: `1860`
-   - Click "Load"
-
-**4. On the import screen:**
-   - **Name**: Node Exporter Full (already filled in)
-   - **Folder**: Dashboards (default is fine)
-   - **Prometheus**: Select "Prometheus" from the dropdown at the bottom
-
-**5. Click "Import"**
-
-**🎉 You should now see a beautiful dashboard!**
-
-The dashboard shows:
-- CPU usage
-- Memory usage
-- Disk I/O
-- Network traffic
-- System load
-- And much more!
-
-**All the graphs should have data flowing in.**
-
-✅ **Take a moment to explore this dashboard!**
+✅ Should show CPU graph!
 
 ---
 
-### Step 17: Create Custom Dashboard for Flask App
+## STEP 16: Create Panel 3 (Memory Usage)
 
-Now let's build our own dashboard to monitor the Flask application!
+1. Click **Add** → **Visualization**
+2. Select **Prometheus**
+3. Query: `memory_usage_percent`
+4. Click **Run queries**
+5. Title: `Memory Usage %`
+6. Visualization: **Time series** or **Gauge**
+7. Click **Apply**
 
-**1. Click the ☰ menu → Dashboards**
-
-**2. Click "New" → "New Dashboard"**
-
-**3. Click "Add visualization"**
-
-**4. Select "Prometheus"** as the data source
-
----
-
-#### Panel 1: App Status
-
-This panel shows if the Flask app is up or down.
-
-**In the query editor at the bottom:**
-
-1. **Click on "Code"** button (top right of query section)
-2. In the query box, type exactly: `up{job="flask-app"}`
-3. **Click "Run queries"** (blue button, bottom right)
-4. You should see the value **1** appear
-
-**Configure the panel (right sidebar):**
-
-1. **Panel options → Title**: Change "Panel Title" to `App Status`
-
-2. **Visualization**: Click the dropdown at top right
-   - Change from "Time series" to **"Stat"**
-
-3. **Standard options → Thresholds** (scroll down on right side):
-   - Click on the **Base** threshold
-   - Change color to **Red** (🔴)
-   - Click "+ Add threshold"
-   - Set value to `1`
-   - Change color to **Green** (🟢)
-
-**What this does:**
-- When value = 0 (app down) → Red
-- When value = 1 (app up) → Green
-
-**4. Click "Apply"** (top right, blue button)
-
-✅ **You should see a green "1" on your dashboard!**
+✅ Three panels complete!
 
 ---
 
-#### Panel 2: CPU Usage
+## STEP 17: Save Dashboard
 
-**1. Click "Add" → "Visualization"** (top right)
+1. Click 💾 **Save** icon (top right)
+2. Name: `Flask App Monitoring`
+3. Click **Save**
 
-**2. Select "Prometheus"**
-
-**3. In the query box:**
-   - Click "Code" button
-   - Type: `cpu_usage_percent`
-   - Click "Run queries"
-
-**4. Configure the panel:**
-   - **Title**: Change to `CPU Usage %`
-   - **Visualization**: Keep as "Time series" (shows changes over time)
-
-**5. Click "Apply"**
-
-✅ **You should see a line graph showing CPU usage!**
+🎉 **Your custom dashboard is ready!**
 
 ---
 
-#### Panel 3: Memory Usage
+## STEP 18: Test Failure - Service Down
 
-**1. Click "Add" → "Visualization"**
-
-**2. Select "Prometheus"**
-
-**3. Query:**
-   - Type: `memory_usage_percent`
-   - Click "Run queries"
-
-**4. Configure:**
-   - **Title**: `Memory Usage %`
-   - **Visualization**: "Time series" or "Gauge" (try both!)
-
-**5. Click "Apply"**
-
-✅ **Now you have three panels showing app status, CPU, and memory!**
-
----
-
-### Step 18: Save Your Dashboard
-
-**1. Click the 💾 Save icon** (top right, looks like a floppy disk)
-
-**2. Give it a name:**
-   - Type: `Flask App Monitoring`
-
-**3. Click "Save"**
-
-🎉 **Your custom dashboard is now saved!**
-
----
-
-## PART 9: TEST THE MONITORING SYSTEM
-
-This is the **most important part** for SRE! We need to verify that our monitoring actually works when things go wrong.
-
----
-
-### Test 1: Service Downtime Detection
-
-Let's intentionally break our app and see if monitoring catches it!
-
-**Step 1: Stop the Flask application**
-
-Open your terminal:
+**Stop Flask app:**
 
 ```bash
 docker stop flask-app
 ```
 
-**Step 2: Wait and observe** (set a timer for 60 seconds)
+**Wait 60 seconds**, then check:
 
-**After 30-45 seconds, check Prometheus:**
+**Prometheus Targets:** http://localhost:9090/targets
+- flask-app should be **RED (DOWN)** 🔴
 
-1. Go to: http://localhost:9090/targets
-   - Find the `flask-app` target
-   - **It should be RED (DOWN)** 🔴
-   - Error message: "connection refused"
+**Prometheus Alerts:** http://localhost:9090/alerts
+- ServiceDown should go **ORANGE** (pending) → **RED** (firing) 🚨
 
-2. Go to: http://localhost:9090/alerts
-   - Watch the "ServiceDown" alert
-   - It will go through these stages:
-     - **Green (Inactive)** → Everything fine
-     - **Orange (Pending)** → App is down, waiting 30s
-     - **Red (Firing)** → Alert is active! 🚨
+**Grafana Dashboard:** http://localhost:3000
+- App Status should show **0 (RED)** 🔴
 
-**Step 3: Check Grafana**
+📸 **Take screenshots!**
 
-Go to your Flask App Monitoring dashboard:
-- The "App Status" panel should show **0** (RED) 🔴
-- CPU and Memory panels will show "No data" (app is stopped)
-
-📸 **Take a screenshot!** This proves your monitoring works.
-
-**Step 4: Restart the application**
+**Restart app:**
 
 ```bash
 docker start flask-app
 ```
 
-**Wait 30 seconds, then check:**
-- Prometheus targets: flask-app should be **GREEN (UP)** 🟢
-- Prometheus alerts: ServiceDown should be **GREEN (Inactive)**
-- Grafana: App Status should be **1 (GREEN)** 🟢
-
-✅ **Success! Your monitoring detected a real failure!**
+Wait 30 seconds - everything should return to green! ✅
 
 ---
 
-### Test 2: High CPU Load Simulation
+## STEP 19: Test Failure - High CPU
 
-Let's trigger the CPU alert!
-
-**Step 1: Enter the Flask container**
+**Generate CPU load:**
 
 ```bash
+# Enter container
 docker exec -it flask-app bash
-```
 
-You're now inside the container!
-
-**Step 2: Install stress testing tool**
-
-```bash
+# Install stress tool
 apt-get update
 apt-get install -y stress
-```
 
-**Step 3: Generate CPU load**
-
-```bash
+# Generate load for 2 minutes
 stress --cpu 2 --timeout 120s
-```
 
-This will max out 2 CPU cores for 2 minutes.
-
-**Step 4: Observe in real-time**
-
-**In Grafana:**
-- Open your Flask App Monitoring dashboard
-- Watch the CPU Usage % panel spike up! 📈
-- The graph should show values jumping to 80-100%
-
-**In Prometheus (after ~1 minute):**
-- Go to: http://localhost:9090/alerts
-- The "HighCPUUsage" alert should:
-  - Turn **Orange (Pending)** after sustained high CPU
-  - Turn **Red (Firing)** after 1 minute
-
-📸 **Take a screenshot of the high CPU graph!**
-
-**Step 5: Exit the container**
-
-After the stress test finishes (or press Ctrl+C to stop it):
-
-```bash
+# Exit
 exit
 ```
 
-✅ **You've validated that CPU monitoring works!**
+**Watch in Grafana:**
+- CPU Usage % graph should spike! 📈
+
+**After 1 minute, check Prometheus Alerts:**
+- HighCPUUsage should fire (RED) 🔴
+
+📸 **Screenshot the spike!**
 
 ---
 
-### Test 3: Verify All Metrics are Flowing
+## STEP 20: Completion Checklist
 
-Let's make sure everything is being collected:
+Check everything works:
 
-**1. In Prometheus, try these queries:**
+- [ ] All 4 containers running
+- [ ] Flask app accessible at http://localhost:8080
+- [ ] Prometheus targets all UP
+- [ ] Grafana dashboards showing data
+- [ ] ServiceDown alert tested (fired when app stopped)
+- [ ] CPU alert tested (fired during load)
 
-```
-up{job="flask-app"}           # Should be 1
-cpu_usage_percent             # Should show current CPU
-memory_usage_percent          # Should show current memory
-node_cpu_seconds_total        # System CPU time
-node_memory_MemAvailable_bytes # System memory
-```
-
-**2. In Grafana, check both dashboards:**
-- Node Exporter Full - All panels should have data
-- Flask App Monitoring - All three panels working
-
-✅ **If all queries return data, your monitoring is fully operational!**
+✅ **If all checked, you're done!** 🎉
 
 ---
 
-## PART 10: UNDERSTANDING WHAT YOU BUILT
+## 📊 What You Built
 
-### How It All Works Together
-
-Let's break down what's happening behind the scenes:
-
-**1. Metric Collection (Every 15 seconds):**
 ```
-Prometheus → Scrapes → Flask App (/metrics)
-                     → Node Exporter (/metrics)
-                     → Itself (self-monitoring)
-```
-
-**2. Data Storage:**
-```
-Prometheus stores metrics in time-series database
-Each metric has: name, value, timestamp, labels
-Example: cpu_usage_percent{job="flask-app"} = 23.5 at 2025-01-15 10:30:45
+┌─────────────────────────────────────────┐
+│         Docker Network                  │
+│                                         │
+│  ┌──────────┐      ┌──────────┐         │
+│  │Flask App │◄─────┤Prometheus│         │
+│  │Port: 8080│      │Port: 9090│         │
+│  └──────────┘      └────┬─────┘         │
+│                         │               │
+│  ┌──────────┐           │  ┌─────────┐  │
+│  │   Node   │◄──────────┴─►│ Grafana │  │
+│  │ Exporter │              │Port: 3000  │
+│  └──────────┘              └─────────┘  │
+└─────────────────────────────────────────┘
 ```
 
-**3. Alerting:**
-```
-Prometheus evaluates rules every 10s
-If condition met for specified duration → Alert fires
-Example: up{job="flask-app"} == 0 for 30s → ServiceDown fires
-```
-
-**4. Visualization:**
-```
-Grafana → Queries Prometheus → Gets time-series data → Renders graphs
-User sees beautiful dashboards with real-time updates
-```
+**Components:**
+- **Flask App**: Your application being monitored
+- **Prometheus**: Collects and stores metrics every 15s
+- **Grafana**: Visualizes metrics in dashboards
+- **Node Exporter**: Provides system-level metrics
 
 ---
 
-### Key Concepts Explained
+## 🎓 Questions & Answers
 
-#### What is a Metric?
+### Q: Why use Docker?
 
-A metric is a **numerical measurement** over time. Examples:
-- CPU usage: 45.2%
-- Memory used: 2.1 GB
-- Requests per second: 150
-- App up/down: 1 or 0
+**A:** Docker ensures the application runs consistently everywhere—my laptop, a colleague's machine, or production. It packages the app with all dependencies into a container, eliminating "works on my machine" problems. For this project, Docker Compose orchestrates 4 services with one command, making the entire stack reproducible.
 
-#### What is a Time-Series?
+---
 
-A sequence of measurements over time:
+### Q: What is Prometheus and how does it work?
+
+**A:** Prometheus is a time-series database for monitoring. It uses a "pull model"—actively scraping HTTP endpoints every 15 seconds instead of applications pushing data. It stores metrics with timestamps and labels, allowing historical queries like "what was CPU usage 2 hours ago?" Prometheus also continuously evaluates alert rules and fires alerts when conditions are met.
+
+---
+
+### Q: Why use `up{job="flask-app"}` instead of `app_up`?
+
+**A:** `app_up` is a custom metric we defined—it's reported by the Flask app and equals 1 when running. But when the container stops, this metric disappears (no one to report it).
+
+`up{job="flask-app"}` is automatically generated by Prometheus for every target. It's 1 when Prometheus successfully scrapes and 0 when it fails. This metric exists even when the container is stopped, making it reliable for alerting. That's why our ServiceDown alert uses `up{job="flask-app"} == 0`.
+
+---
+
+### Q: How do containers communicate?
+
+**A:** Docker Compose creates a bridge network where containers communicate using service names as hostnames. When Grafana connects to `http://prometheus:9090`, Docker's DNS resolves "prometheus" to the Prometheus container's IP. This is why we use container names, not `localhost`—each container has its own localhost.
+
+---
+
+### Q: Why do alerts have a `for:` duration?
+
+**A:** The `for: 30s` prevents false alarms. Without it, a brief network hiccup would trigger an alert immediately. By waiting 30 seconds, we confirm the issue is sustained and actionable. This prevents alert fatigue—too many false alerts cause engineers to ignore them, defeating the purpose.
+
+---
+
+### Q: Why simulate failures?
+
+**A:** Failure simulation validates that monitoring actually works. It's not enough to build dashboards—you need proof they'll catch real issues. By stopping the Flask app, we confirmed:
+1. Prometheus detected the outage
+2. The alert fired as configured
+3. Grafana showed correct status
+
+This is chaos engineering—intentionally breaking things builds confidence in your monitoring.
+
+---
+
+### Q: How would you improve this for production?
+
+**A:** For production, I'd add:
+1. **AlertManager** for notifications (Slack, email, PagerDuty)
+2. **Persistent storage** for Prometheus data
+3. **HTTPS and authentication** for all endpoints
+4. **High availability** with multiple Prometheus instances
+5. **More metrics** (request latency, error rates, business metrics)
+6. **Log aggregation** (ELK or Loki)
+7. **Distributed tracing** (Jaeger)
+8. **Service discovery** for dynamic environments
+9. **Backup procedures**
+
+---
+
+## 🔧 Troubleshooting
+
+### Problem: "No data" in Grafana
+
+**Solutions:**
+1. Check Prometheus targets: http://localhost:9090/targets (all should be UP)
+2. Verify metrics: `curl http://localhost:8080/metrics`
+3. Set Grafana time range to "Last 5 minutes"
+4. Wait 30 seconds for data collection
+5. Use `up{job="flask-app"}` instead of `app_up`
+
+---
+
+### Problem: Alerts not firing
+
+**Solutions:**
+1. Check config loaded: http://localhost:9090/config
+2. Restart Prometheus: `docker restart prometheus`
+3. Wait full duration (60-90 seconds total)
+4. Verify YAML syntax (indentation matters!)
+
+---
+
+### Problem: Can't access services
+
+**Solutions:**
+1. Verify containers: `docker-compose ps` (all should be "Up")
+2. Check ports aren't in use
+3. Restart: `docker-compose down && docker-compose up -d`
+4. Check logs: `docker logs flask-app`
+
+---
+
+### Problem: Grafana can't connect to Prometheus
+
+**Solution:**
+URL must be `http://prometheus:9090` (not `localhost:9090`)
+
+Use container name, not localhost!
+
+---
+
+## 🛑 Stopping the Project
+
+**Stop services:**
+```bash
+docker-compose down
 ```
-10:00:00 → CPU: 20%
-10:00:15 → CPU: 25%
-10:00:30 → CPU: 30%
-10:00:45 → CPU: 28%
+
+**Stop and remove all data:**
+```bash
+docker-compose down -v
 ```
 
-This lets us see trends, spikes, and patterns.
-
-#### What is Scraping?
-
-Prometheus **pulls** metrics from targets (it doesn't push):
+**Restart from scratch:**
+```bash
+docker-compose down -v
+docker rmi flask-monitoring-stack-app
+docker-compose up -d
 ```
-Every 15 seconds:
-Prometheus → HTTP
+
+**Learning resources:**
+- [Google SRE Book](https://sre.google/books/) (free)
+- [Prometheus Docs](https://prometheus.io/docs/)
+- [Grafana Tutorials](https://grafana.com/tutorials/)
+
+---
+
+## 🙏 Credits
+
+- Prometheus community
+- Grafana Labs
+- Docker
+- The SRE community
+
+---
+
+## 📄 License
+
+MIT License - feel free to use for learning!
+
+---
+
+**🎉 CONGRATULATIONS! You built a complete monitoring system!**
+
+**Built with ❤️ for learning SRE**
+
+---
+
+**Questions? Issues? Open an issue on GitHub!**
+**Found this helpful? Star it on GitHub! ⭐**
